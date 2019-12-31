@@ -1,24 +1,19 @@
-
 uint8_t  uartRxBuff[1024];
 int  rxPos = 0;
 int  cmdLength = 0;
 uint8_t  cmdType = 0;
 long lastRxReceive = 0;
 
-int x,y;
-
-String deviceType[] = {"UNKNOWN","POINTER","MOUSE","RESERVED","JOYSTICK","GAMEPAD","KEYBOARD","KEYPAD","MULTI_AXIS","SYSTEM"};
-
-void setup()
-{
+String deviceType[] = {"UNKNOWN", "POINTER", "MOUSE", "RESERVED", "JOYSTICK", "GAMEPAD", "KEYBOARD", "KEYPAD", "MULTI_AXIS", "SYSTEM"};
+String keyboardstring;
+void setup(void) {
   Serial.begin(230400);
-  Serial1.begin(100000, SERIAL_8N1, 16, 17);
+  Serial1.begin(1000000, SERIAL_8N1, 16, 17);
   Serial.println("OK There");
 }
 
-void loop()
-{
-  if (Serial1.available())
+void loop() {
+  while (Serial1.available())
   {
     lastRxReceive = millis();
     //Serial.print("h0x");//Only for Debug
@@ -27,15 +22,12 @@ void loop()
     uartRxBuff[rxPos] = Serial1.read();
     if (rxPos == 0 && uartRxBuff[rxPos] == 0xFE) {
       cmdType = 1;
-    }else
-    if (rxPos == 1 && cmdType == 1) {
+    } else if (rxPos == 1 && cmdType == 1) {
       cmdLength = uartRxBuff[rxPos];
-    }else
-    if (rxPos == 2 && cmdType == 1) {
-      cmdLength += (uartRxBuff[rxPos]<<8);
+    } else if (rxPos == 2 && cmdType == 1) {
+      cmdLength += (uartRxBuff[rxPos] << 8);
       //printf( "Length: %i\n", cmdLength);//Only for Debug
-    }else
-    if (cmdType == 0 && uartRxBuff[rxPos] == '\n') {
+    } else if (cmdType == 0 && uartRxBuff[rxPos] == '\n') {
       printf("No COMMAND Received\n");
       for (uint8_t i = 0; i < rxPos; i ++ )
       {
@@ -45,8 +37,8 @@ void loop()
       rxPos = 0;
       cmdType = 0;
     }
-    if (rxPos > 0 && rxPos == cmdLength+11 && cmdType || rxPos > 1024) {
-      filterCommand(cmdLength,uartRxBuff);
+    if (rxPos > 0 && rxPos == cmdLength + 11 && cmdType || rxPos > 1024) {
+      filterCommand(cmdLength, uartRxBuff);
       for (int i = 0; i < rxPos; i ++ )
       {
         //printf( "0x%02X ", uartRxBuff[i]);//Only for Debug
@@ -58,17 +50,13 @@ void loop()
       rxPos++;
     }
 
-  } else {
-    if (millis() - lastRxReceive >= 500) {
-      rxPos = 0;
-    }
   }
+  rxPos = 0;
 
   if (Serial.available())
   {
     Serial1.write(Serial.read());
   }
- 
 }
 
 #define MSG_TYPE_CONNECTED      0x01
@@ -82,7 +70,7 @@ void loop()
 
 
 
-void filterCommand(int buffLength, unsigned char *msgbuffer){
+void filterCommand(int buffLength, unsigned char *msgbuffer) {
   int cmdLength = buffLength;
   unsigned char msgType = msgbuffer[3];
   unsigned char devType = msgbuffer[4];
@@ -92,88 +80,75 @@ void filterCommand(int buffLength, unsigned char *msgbuffer){
   unsigned char idVendorH = msgbuffer[8];
   unsigned char idProductL = msgbuffer[9];
   unsigned char idProductH = msgbuffer[10];
-  switch(msgType){
+  switch (msgType) {
     case MSG_TYPE_CONNECTED:
       Serial.print("Device Connected on port");
       Serial.println(device);
-    break;
+      break;
     case MSG_TYPE_DISCONNECTED:
       Serial.print("Device Disconnected on port");
       Serial.println(device);
-    break;
+      break;
     case MSG_TYPE_ERROR:
       Serial.print("Device Error ");
       Serial.print(device);
       Serial.print(" on port ");
       Serial.println(devType);
-    break;
+      break;
     case MSG_TYPE_DEVICE_POLL:
       Serial.print("Device HID Data from port: ");
-      Serial.print(device);
-      Serial.print(" , Length: ");
-      Serial.print(cmdLength);
-      Serial.print(" , Type: ");
-      Serial.print (deviceType[devType]);
-      Serial.print(" , ID: ");
-      for(int j = 0; j < 4; j++){
-      Serial.print("0x");
-      Serial.print(msgbuffer[j+7],HEX);
-      Serial.print(" ");
-      }
-      Serial.print(" ,  ");
-      for(int j = 0; j < cmdLength; j++){
-      Serial.print("0x");
-      Serial.print(msgbuffer[j+11],HEX);
-      Serial.print(" ");
-      }
-      if(devType==2){
-        if(msgbuffer[7+1]==0x00000001){
-          x=0;
-          y=0;
+        Serial.print(device);
+        Serial.print(" , Length: ");
+        Serial.print(cmdLength);
+        Serial.print(" , Type: ");
+        Serial.print (deviceType[devType]);
+        Serial.print(" , ID: ");
+        for (int j = 0; j < 4; j++) {
+        Serial.print("0x");
+        Serial.print(msgbuffer[j + 7], HEX);
+        Serial.print(" ");
         }
-        x+=(int16_t)((uint8_t)msgbuffer[11+2]+((uint8_t)msgbuffer[11+3]<<8));
-        y+=(int16_t)((uint8_t)msgbuffer[11+4]+((uint8_t)msgbuffer[11+5]<<8));
-        if(x>600)x=600;
-        if(x<0)x=0;
-        if(y>600)y=600;
-        if(y<0)y=0;
-      }
-      Serial.println();
-       Serial.println("X= "+String(x)+ " Y= "+String(y));
-    break;
+        Serial.print(" ,  ");
+        for (int j = 0; j < cmdLength; j++) {
+        Serial.print("0x");
+        Serial.print(msgbuffer[j + 11], HEX);
+        Serial.print(" ");
+        }
+        Serial.println();
+      break;
     case MSG_TYPE_DEVICE_STRING:
       Serial.print("Device String port ");
       Serial.print(devType);
       Serial.print(" Name: ");
-      for(int j = 0; j < cmdLength; j++)
-      Serial.write(msgbuffer[j+11]);
+      for (int j = 0; j < cmdLength; j++)
+        Serial.write(msgbuffer[j + 11]);
       Serial.println();
-    break;
+      break;
     case MSG_TYPE_DEVICE_INFO:
       Serial.print("Device info from port");
       Serial.print(device);
       Serial.print(", Descriptor: ");
-      for(int j = 0; j < cmdLength; j++){
-      Serial.print("0x");
-      Serial.print(msgbuffer[j+11],HEX);
-      Serial.print(" ");
+      for (int j = 0; j < cmdLength; j++) {
+        Serial.print("0x");
+        Serial.print(msgbuffer[j + 11], HEX);
+        Serial.print(" ");
       }
       Serial.println();
-    break;
+      break;
     case MSG_TYPE_HID_INFO:
       Serial.print("HID info from port");
       Serial.print(device);
       Serial.print(", Descriptor: ");
-      for(int j = 0; j < cmdLength; j++){
-      Serial.print("0x");
-      Serial.print(msgbuffer[j+11],HEX);
-      Serial.print(" ");
+      for (int j = 0; j < cmdLength; j++) {
+        Serial.print("0x");
+        Serial.print(msgbuffer[j + 11], HEX);
+        Serial.print(" ");
       }
       Serial.println();
-    break;
+      break;
     case MSG_TYPE_STARTUP:
       Serial.println("USB host ready");
-    break;
-    
+      break;
+
   }
 }
